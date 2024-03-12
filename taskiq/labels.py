@@ -1,6 +1,8 @@
 import base64
 import enum
-from typing import Any, Callable, Dict, Optional, Tuple
+import pickle
+from collections.abc import Callable
+from typing import Any
 
 
 class LabelType(enum.IntEnum):
@@ -14,17 +16,17 @@ class LabelType(enum.IntEnum):
     BYTES = enum.auto()
 
 
-_LABEL_PARSERS: Dict[LabelType, Callable[[str], Any]] = {
+_LABEL_PARSERS: dict[LabelType, Callable[[str], Any]] = {
     LabelType.INT: int,
     LabelType.STR: str,
     LabelType.FLOAT: float,
     LabelType.BOOL: lambda x: x.lower() == "true",
     LabelType.BYTES: base64.b64decode,
-    LabelType.ANY: lambda x: x,
+    LabelType.ANY: lambda x: pickle.loads(base64.b64decode(x)),
 }
 
 
-def prepare_label(label_value: Any) -> Tuple[str, int]:
+def prepare_label(label_value: Any) -> tuple[str, int]:
     """
     Prepare label value for serialization.
 
@@ -36,10 +38,10 @@ def prepare_label(label_value: Any) -> Tuple[str, int]:
         return str(label_value), LabelType[var_type.__name__.upper()].value
     if var_type == bytes:
         return base64.b64encode(label_value).decode(), LabelType.BYTES.value
-    return str(label_value), LabelType.ANY.value
+    return base64.b64encode(pickle.dumps(label_value)).decode(), LabelType.ANY.value
 
 
-def parse_label(label_value: Any, label_type: Optional[int] = None) -> Any:
+def parse_label(label_value: Any, label_type: int | None = None) -> Any:
     """
     Parse label value from serialized format.
 
